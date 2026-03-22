@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VENA Clinical | Triagem e Apoio à Decisão</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #0052CC;
+            --brand-secondary: #0747A6;
+            --bg-canvas: #F4F7FA;
+            --white: #FFFFFF;
+            --text-main: #172B4D;
+            --text-light: #6B778C;
+            --border: #DFE1E6;
+            
+            /* Risk Colors */
+            --risk-red: #E5493A;
+            --risk-orange: #FF8B00;
+            --risk-yellow: #FFAB00;
+            --risk-yellow-light: #FFF8E6;
+            --risk-green: #36B37E;
+            --risk-green-light: #EBF8F2;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-canvas); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* --- Header --- */
+        .top-nav {
+            background: var(--brand-secondary);
+            color: white; padding: 0 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .patient-pill {
+            background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 8px;
+            display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* --- Layout Principal --- */
+        .app-shell { display: flex; flex: 1; overflow: hidden; }
+
+        /* --- Sidebar Stepper --- */
+        .sidebar-stepper {
+            width: 260px; background: var(--white); border-right: 1px solid var(--border);
+            padding: 24px 0; display: flex; flex-direction: column;
+        }
+        .step-link {
+            padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+            color: var(--text-light); text-decoration: none; font-weight: 600; font-size: 14px; transition: 0.2s; cursor: pointer;
+        }
+        .step-link.active { color: var(--brand-primary); background: #F0F5FF; border-left: 4px solid var(--brand-primary); padding-left: 20px;}
+        .step-icon {
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+        }
+        .active .step-icon { border-color: var(--brand-primary); background: var(--brand-primary); color: white; }
+        .completed .step-icon { background: var(--risk-green); border-color: var(--risk-green); color: white; }
+
+        /* --- Viewport de Formulários --- */
+        .viewport { flex: 1; padding: 32px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+        .step-pane { width: 100%; max-width: 1000px; display: none; animation: fadeIn 0.3s ease; }
+        .step-pane.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- UI Components --- */
+        .card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
+        .field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-light); margin-bottom: 6px; text-transform: uppercase; }
+        .input-ctrl { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 16px; font-weight: 600; background: #F8FAFC; outline: none; transition: 0.2s; }
+        .input-ctrl:focus { border-color: var(--brand-primary); background: white; }
+
+        /* Pills */
+        .pill-flow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .pill { padding: 10px 18px; border-radius: 20px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
+        .pill.selected { background: var(--brand-primary); color: white; border-color: var(--brand-primary); }
+
+        /* --- Dashboard Final (Decision Hub) --- */
+        .top-summary-grid { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 24px; margin-bottom: 24px; }
+        .v-tag { background: #F0F2F5; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; color: #44546F; margin-right: 8px; }
+        .v-tag.warn { background: var(--risk-yellow-light); color: #B54708; border: 1px solid #FFECB3; }
+        
+        .protocol-item { border: 2px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; position: relative; cursor: pointer; transition: 0.2s; }
+        .protocol-item.suggested { border-color: var(--risk-yellow); background: var(--risk-yellow-light); }
+        .protocol-item input { position: absolute; top: 18px; right: 18px; transform: scale(1.3); }
+
+        .decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .motor-card { border-left: 6px solid var(--risk-yellow); background: #F8FAFC; }
+        .final-card { border: 2px solid var(--brand-primary); }
+        .copy-btn { background: #E9F2FF; color: var(--brand-primary); border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .copy-btn:hover { background: var(--brand-primary); color: white; }
+
+        /* --- Side Engine Rail --- */
+        .engine-rail { width: 340px; background: #F8FAFC; border-left: 1px solid var(--border); padding: 24px; overflow-y: auto; }
+        .risk-display { text-align: center; padding: 20px; border-radius: 12px; border: 3px solid var(--risk-yellow); background: var(--risk-yellow-light); margin-bottom: 20px; }
+        .risk-display h2 { font-size: 28px; font-weight: 900; color: var(--risk-yellow); }
+
+        .footer-nav { margin-top: auto; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 14px 28px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; transition: 0.2s; }
+        .btn-primary { background: var(--brand-primary); color: white; }
+        .btn-confirm { background: var(--risk-green); color: white; width: 100%; max-width: 500px; font-size: 16px; box-shadow: 0 4px 14px rgba(54, 179, 126, 0.3); }
+    </style>
+</head>
+<body>
+
+    <header class="top-nav">
+        <div style="font-weight: 800; font-size: 18px;">VENA <span style="font-weight: 400;">Clinical</span></div>
+        <div class="patient-pill">
+            <div style="font-size: 14px;"><b>Isadora Delane G. de Souza</b> • 22 anos • Atend: 25320</div>
+        </div>
+        <div style="font-size: 12px; opacity: 0.8;">Unidade: Enfermaria | Dr. Junior</div>
+    </header>
+
+    <div class="app-shell">
+        <aside class="sidebar-stepper">
+            <div class="step-link active" id="s1" onclick="nav(1)"><div class="step-icon">1</div> Sinais Vitais</div>
+            <div class="step-link" id="s2" onclick="nav(2)"><div class="step-icon">2</div> Sintomas e Dor</div>
+            <div class="step-link" id="s3" onclick="nav(3)"><div class="step-icon">3</div> Neurologia</div>
+            <div class="step-link" id="s4" onclick="nav(4)"><div class="step-icon">4</div> Desfecho Clínico</div>
+        </aside>
+
+        <main class="viewport">
+            
+            <div class="step-pane active" id="p1">
+                <h2 style="margin-bottom: 8px;">Sinais Vitais</h2>
+                <p style="color: var(--text-light); margin-bottom: 24px;">Insira os dados fisiológicos para análise do motor.</p>
+                <div class="card input-grid">
+                    <div class="field"><label>PA Sistólica</label><input type="number" class="input-ctrl" value="101"></div>
+                    <div class="field"><label>PA Diastólica</label><input type="number" class="input-ctrl" value="80"></div>
+                    <div class="field"><label>FC (bpm)</label><input type="number" class="input-ctrl" value="100" style="color: var(--risk-orange);"></div>
+                    <div class="field"><label>SpO2 (%)</label><input type="number" class="input-ctrl" value="98"></div>
+                    <div class="field"><label>Temperatura</label><input type="number" class="input-ctrl" value="35.0" style="color: var(--risk-yellow);"></div>
+                    <div class="field"><label>Nível Cons.</label><select class="input-ctrl"><option>Alerta</option><option>Voz</option></select></div>
+                </div>
+                <div class="footer-nav"><div></div><button class="btn btn-primary" onclick="nav(2)">Avançar: Sintomas</button></div>
+            </div>
+
+            <div class="step-pane" id="p2">
+                <h2 style="margin-bottom: 8px;">Queixas Principais</h2>
+                <div class="card">
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-light);">SINTOMAS ATIVOS</label>
+                    <div class="pill-flow">
+                        <div class="pill">Náusea</div><div class="pill">Vômito</div><div class="pill selected" style="color: var(--risk-red);">Dor Torácica</div>
+                        <div class="pill">Dispneia</div><div class="pill">Tontura</div><div class="pill">Gripal</div>
+                    </div>
+                    <div style="margin-top: 32px;">
+                        <label style="font-size: 11px; font-weight: 700; color: var(--text-light);">ESCALA DE DOR (0-10)</label>
+                        <div class="pill-flow">
+                            <div class="pill">0</div><div class="pill">2</div><div class="pill">4</div><div class="pill selected" style="background: var(--risk-yellow);">6</div><div class="pill">8</div><div class="pill">10</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-nav"><button class="btn" onclick="nav(1)">Voltar</button><button class="btn btn-primary" onclick="nav(3)">Avançar: Neuro</button></div>
+            </div>
+
+            <div class="step-pane" id="p3">
+                <h2 style="margin-bottom: 8px;">Avaliação Neurológica</h2>
+                <div class="card">
+                    <div class="pill-flow">
+                        <div class="pill">Déficit Motor</div><div class="pill">Fala Alterada</div><div class="pill">Assimetria Facial</div>
+                    </div>
+                    <div class="field" style="margin-top: 24px;">
+                        <label>Evolução de Enfermagem</label>
+                        <textarea class="input-ctrl" style="height: 120px; font-size: 14px;">Paciente apresenta queixa retroesternal iniciada há 2h...</textarea>
+                    </div>
+                </div>
+                <div class="footer-nav"><button class="btn" onclick="nav(2)">Voltar</button><button class="btn btn-primary" onclick="nav(4)">Ver Desfecho</button></div>
+            </div>
+
+            <div class="step-pane" id="p4">
+                <h2 style="margin-bottom: 8px;">Resumo e Decisão</h2>
+                <p class="subtitle">Valide as sugestões do motor para finalizar o atendimento.</p>
+
+                <div class="top-summary-grid">
+                    <div class="card">
+                        <h4 style="font-size: 11px; color: var(--text-light); margin-bottom: 12px;">🔍 REVISÃO DOS DADOS</h4>
+                        <div style="font-size: 14px; line-height: 1.6;">
+                            <p><b>Caso:</b> Isadora, 22a. Queixa retroesternal em aperto (EVA 6/10).</p>
+                            <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;">
+                                <div class="v-tag">PA 101/80</div><div class="v-tag">FC 100</div><div class="v-tag warn">TEMP 35.0</div><div class="v-tag warn">NEWS2: 5</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h4 style="font-size: 11px; color: var(--text-light); margin-bottom: 12px;">🛡️ PROTOCOLOS SUGERIDOS</h4>
+                        <div class="protocol-item suggested">
+                            <input type="checkbox" checked><div class="protocol-name">DOR TORÁCICA</div>
+                            <div class="protocol-desc">Início imediato IAM: ECG em 10min e monitorização.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="decision-grid">
+                    <div class="card motor-card">
+                        <label style="font-size: 10px; font-weight: 800;">SUGESTÃO DO MOTOR</label>
+                        <div style="font-size: 24px; font-weight: 900; color: var(--risk-yellow); margin: 6px 0;">AMARELO</div>
+                        <p style="font-size: 12px; color: var(--text-light); font-style: italic;" id="motorReason">
+                            Motivo: NEWS2 moderado (5) + Hipotermia relativa (35.0°C) + Dor torácica ativa com EVA 6.
+                        </p>
+                    </div>
+                    <div class="card final-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <label style="font-size: 10px; font-weight: 800; color: var(--brand-primary);">CLASSIFICAÇÃO FINAL</label>
+                            <button class="copy-btn" onclick="copyReason()">⚡ USAR JUSTIFICATIVA MOTOR</button>
+                        </div>
+                        <select class="input-ctrl" style="font-size: 18px; border: none; padding: 0; color: var(--brand-primary); margin-bottom: 10px;">
+                            <option>Amarelo (ESI 3)</option><option>Laranja (ESI 2)</option><option>Verde (ESI 4)</option>
+                        </select>
+                        <textarea class="input-ctrl" id="profJust" style="font-size: 13px; height: 80px;" placeholder="Justificativa clínica..."></textarea>
+                    </div>
+                </div>
+
+                <div class="footer-nav"><button class="btn" onclick="nav(3)">Revisar</button><button class="btn btn-confirm" onclick="alert('Triagem Salva!')">✓ Confirmar e Iniciar Protocolos</button></div>
+            </div>
+
+        </main>
+
+        <aside class="engine-rail">
+            <h3 style="font-size: 11px; font-weight: 800; color: var(--text-light); margin-bottom: 20px;">ENGINE LIVE ANALYTICS</h3>
+            <div class="risk-display"><h2>AMARELO</h2><p style="font-size: 11px; font-weight: 700; color: var(--text-light);">Urgente • 30 min</p></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                <div class="score-box"><small>NEWS2</small><span>5</span></div>
+                <div class="score-box"><small>qSOFA</small><span>0</span></div>
+            </div>
+            <h4 style="font-size: 11px; font-weight: 800; color: var(--text-light); margin-bottom: 10px;">ALERTAS</h4>
+            <div style="background: #FFFBEB; border-left: 4px solid var(--risk-yellow); padding: 12px; border-radius: 8px; font-size: 12px; color: #854D0E;">
+                <b>Hipotermia (35.0°C)</b><br>Monitorar temperatura em 1h.
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        function nav(step) {
+            document.querySelectorAll('.step-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.step-link').forEach(l => l.classList.remove('active'));
+            document.getElementById('p'+step).classList.add('active');
+            document.getElementById('s'+step).classList.add('active');
+            if(step > 1) { for(let i=1; i<step; i++) document.getElementById('s'+i).classList.add('completed'); }
+        }
+        function copyReason() {
+            const reason = document.getElementById('motorReason').innerText;
+            document.getElementById('profJust').value = reason.replace('Motivo: ', '').trim();
+        }
+        document.querySelectorAll('.pill').forEach(pill => { pill.addEventListener('click', function() { this.classList.toggle('selected'); }); });
+    </script>
+</body>
+</html>
